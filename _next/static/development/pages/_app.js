@@ -53128,9 +53128,9 @@ var translation = {
   big_small_odd_even_2: '賭大小單雙',
   five_element_2: '五行玩法',
   first2_sum_2: '賭和值大小單雙',
-  dragon_tiger_2: '賭前五名',
-  compound_bet2_2: '賭前五名',
-  compound_bet3_2: '賭前五名',
+  dragon_tiger_2: '龍虎',
+  compound_bet2_2: '前二複式',
+  compound_bet3_2: '前三複式',
   play_rule: '玩法',
   play_hint: '玩法提示',
   success_bet: '下注成功，請到注單列表查看。',
@@ -53979,7 +53979,7 @@ function () {
 /*!*******************************!*\
   !*** ./libs/format-helper.js ***!
   \*******************************/
-/*! exports provided: currentBetToBetreceipt, encodePK10Bet, decodePk10Bet, decodeBaccaratCard */
+/*! exports provided: currentBetToBetreceipt, encodePK10Bet, decodePk10Bet, decodeBaccaratCard, compoundBetCount */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -53988,6 +53988,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodePK10Bet", function() { return encodePK10Bet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "decodePk10Bet", function() { return decodePk10Bet; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "decodeBaccaratCard", function() { return decodeBaccaratCard; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "compoundBetCount", function() { return compoundBetCount; });
 /* harmony import */ var _libs_i18n_util__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../libs/i18n-util */ "./libs/i18n-util.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lodash */ "../node_modules/lodash/lodash.js");
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_1__);
@@ -54163,11 +54164,19 @@ function encodePK10Bet(tableName, selection) {
     return parseInt(bitPresent, 2);
   };
 
+  selection = lodash__WEBPACK_IMPORTED_MODULE_1___default.a.cloneDeep(selection);
   var action = PK10GameMeta[tableName].action;
   var item = null;
 
   if (lodash__WEBPACK_IMPORTED_MODULE_1___default.a.isNil(action)) {
     throw new Error("Wrong table name ".concat(tableName));
+  } // special cases
+
+
+  if (tableName === 'compoundBet2' || tableName === 'compoundBet3') {
+    while (selection.length < 10) {
+      selection.push(new Array(10).fill(false));
+    }
   }
 
   if (lodash__WEBPACK_IMPORTED_MODULE_1___default.a.isArray(selection[0])) {
@@ -54359,6 +54368,126 @@ function decodeBaccaratCard(card) {
     rank: Math.floor((card - 1) / 4) + 1,
     color: (card - 1) % 4 + 1
   };
+}
+function compoundBetCount(selection) {
+  if (selection.length !== 2 && selection.length !== 3) {
+    throw new Error("Invalid selection.length ".concat(selection.length));
+  }
+
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
+
+  try {
+    for (var _iterator = selection[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var row = _step.value;
+
+      if (row.length !== 10) {
+        throw new Error("Invalid row.length ".concat(row.length));
+      }
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return != null) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+
+  var rowCounts = [];
+  var _iteratorNormalCompletion2 = true;
+  var _didIteratorError2 = false;
+  var _iteratorError2 = undefined;
+
+  try {
+    for (var _iterator2 = selection[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+      var _row = _step2.value;
+      var rowCount = 0;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = _row[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var value = _step3.value;
+          rowCount += value === true;
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
+        }
+      }
+
+      rowCounts.push(rowCount);
+    }
+  } catch (err) {
+    _didIteratorError2 = true;
+    _iteratorError2 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+        _iterator2.return();
+      }
+    } finally {
+      if (_didIteratorError2) {
+        throw _iteratorError2;
+      }
+    }
+  }
+
+  var all = rowCounts.reduce(function (prev, current) {
+    return prev * current;
+  }, 1);
+
+  if (all === 0) {
+    return 0;
+  }
+  /**
+   * Pick 2 same numbers
+   */
+
+
+  var illegal = 0;
+
+  for (var i = 0; i < selection.length; i++) {
+    for (var j = i + 1; j < selection.length; j++) {
+      for (var k = 0; k < 10; k++) {
+        if (selection[i][k] === true && selection[j][k] === true) {
+          illegal += all / rowCounts[i] / rowCounts[j];
+        }
+      }
+    }
+  }
+  /**
+   * inclusion-exclusion principle
+   */
+
+
+  if (selection.length === 3) {
+    for (var _i2 = 0; _i2 < 10; _i2++) {
+      if (selection[0][_i2] && selection[1][_i2] && selection[2][_i2]) {
+        illegal -= 2;
+      }
+    }
+  }
+
+  return all - illegal;
 }
 
 /***/ }),
@@ -55834,7 +55963,7 @@ var INITIAL_STATE = {
       })
     }
   },
-  currentTable: 'fiveElements',
+  currentTable: 'compoundBet2',
   gameGlobal: null,
   gameResults: null,
   gameState: PK10_GAME_STATE_UNKNOWN,
@@ -55884,62 +56013,83 @@ var reducer = function reducer() {
 
     case PK10_ACTION_UPDATE_BET_GAME_TYPE_COMPOUND_BET2:
       {
-        return state;
+        var _rank = payload.rank,
+            _number = payload.number,
+            _value = payload.value;
+
+        var _newState = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+
+        _newState.bets.compoundBet2.selection[_rank][_number] = _value;
+        return _newState;
       }
 
     case PK10_ACTION_UPDATE_BET_GAME_TYPE_COMPOUND_BET3:
       {
-        return state;
+        var _rank2 = payload.rank,
+            _number2 = payload.number,
+            _value2 = payload.value;
+
+        var _newState2 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+
+        _newState2.bets.compoundBet3.selection[_rank2][_number2] = _value2;
+        return _newState2;
       }
 
     case PK10_ACTION_UPDATE_BET_GAME_TYPE_FIRST2_SUM:
       {
         var selected = payload.selected,
-            _value = payload.value;
-
-        var _newState = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
-
-        _newState.bets.first2Sum.selection[selected] = _value;
-        return _newState;
-      }
-
-    case PK10_ACTION_UPDATE_BET_GAME_TYPE_DRAGON_TIGER:
-      {
-        return state;
-      }
-
-    case PK10_ACTION_UPDATE_BET_GAME_TYPE_5_ELEMENTS:
-      {
-        var _rank = payload.rank,
-            category = payload.category,
-            _value2 = payload.value;
-
-        var _newState2 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
-
-        _newState2.bets.fiveElements.selection[_rank][category] = _value2;
-        return _newState2;
-      }
-
-    case PK10_ACTION_UPDATE_BET_GAME_TYPE_BIG_SMALL_ODD_EVEN:
-      {
-        var _rank2 = payload.rank,
-            _category = payload.category,
             _value3 = payload.value;
 
         var _newState3 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
 
-        _newState3.bets.bigSmallOddEven.selection[_rank2][_category] = _value3;
+        _newState3.bets.first2Sum.selection[selected] = _value3;
         return _newState3;
+      }
+
+    case PK10_ACTION_UPDATE_BET_GAME_TYPE_DRAGON_TIGER:
+      {
+        var _rank3 = payload.rank,
+            category = payload.category,
+            _value4 = payload.value;
+
+        var _newState4 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+
+        _newState4.bets.dragonTiger.selection[_rank3][category] = _value4;
+        return _newState4;
+      }
+
+    case PK10_ACTION_UPDATE_BET_GAME_TYPE_5_ELEMENTS:
+      {
+        var _rank4 = payload.rank,
+            _category = payload.category,
+            _value5 = payload.value;
+
+        var _newState5 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+
+        _newState5.bets.fiveElements.selection[_rank4][_category] = _value5;
+        return _newState5;
+      }
+
+    case PK10_ACTION_UPDATE_BET_GAME_TYPE_BIG_SMALL_ODD_EVEN:
+      {
+        var _rank5 = payload.rank,
+            _category2 = payload.category,
+            _value6 = payload.value;
+
+        var _newState6 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+
+        _newState6.bets.bigSmallOddEven.selection[_rank5][_category2] = _value6;
+        return _newState6;
       }
 
     case PK10_ACTION_CHANGE_CURRENT_TABLE:
       {
         var table = payload.table;
 
-        var _newState4 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+        var _newState7 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
 
-        _newState4.currentTable = table;
-        return _newState4;
+        _newState7.currentTable = table;
+        return _newState7;
       }
 
     case PK10_ACTION_UPDATE_BET_HISTORY:
@@ -55948,21 +56098,21 @@ var reducer = function reducer() {
             myBets = payload.myBets,
             leaderboard = payload.leaderboard;
 
-        var _newState5 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+        var _newState8 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
 
         if (allBets) {
-          _newState5.betHistory.allBets = allBets;
+          _newState8.betHistory.allBets = allBets;
         }
 
         if (myBets) {
-          _newState5.betHistory.myBets = myBets;
+          _newState8.betHistory.myBets = myBets;
         }
 
         if (leaderboard) {
-          _newState5.betHistory.leaderboard = leaderboard;
+          _newState8.betHistory.leaderboard = leaderboard;
         }
 
-        return _newState5;
+        return _newState8;
       }
 
     case PK10_ACTION_UPDATE_CURRENT_BETS:
@@ -55977,10 +56127,10 @@ var reducer = function reducer() {
       {
         var currentTable = state.currentTable;
 
-        var _newState6 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+        var _newState9 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
 
-        _newState6.bets[currentTable] = INITIAL_STATE.bets[currentTable];
-        return _newState6;
+        _newState9.bets[currentTable] = INITIAL_STATE.bets[currentTable];
+        return _newState9;
       }
 
     case PK10_ACTION_RANDOM_SELECT:
@@ -56001,10 +56151,10 @@ var reducer = function reducer() {
           }
         }
 
-        var _newState7 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
+        var _newState10 = lodash__WEBPACK_IMPORTED_MODULE_0___default.a.cloneDeep(state);
 
-        _newState7.bets[_currentTable].selection = selection;
-        return _newState7;
+        _newState10.bets[_currentTable].selection = selection;
+        return _newState10;
       }
 
     default:
@@ -56068,27 +56218,63 @@ var actions = {
       }
     };
   },
-  pk10AddBetCompoundBet2: function pk10AddBetCompoundBet2(selection) {
+  pk10AddBetCompoundBet2: function pk10AddBetCompoundBet2(rank, number) {
     return {
       type: PK10_ACTION_UPDATE_BET_GAME_TYPE_COMPOUND_BET2,
       payload: {
-        selection: selection
+        rank: rank,
+        number: number,
+        value: true
       }
     };
   },
-  pk10AddBetCompoundBet3: function pk10AddBetCompoundBet3(selection) {
+  pk10RemoveBetCompoundBet2: function pk10RemoveBetCompoundBet2(rank, number) {
+    return {
+      type: PK10_ACTION_UPDATE_BET_GAME_TYPE_COMPOUND_BET2,
+      payload: {
+        rank: rank,
+        number: number,
+        value: false
+      }
+    };
+  },
+  pk10AddBetCompoundBet3: function pk10AddBetCompoundBet3(rank, number) {
     return {
       type: PK10_ACTION_UPDATE_BET_GAME_TYPE_COMPOUND_BET3,
       payload: {
-        selection: selection
+        rank: rank,
+        number: number,
+        value: true
       }
     };
   },
-  pk10AddBetDragonTiger: function pk10AddBetDragonTiger(selection) {
+  pk10RemoveBetCompoundBet3: function pk10RemoveBetCompoundBet3(rank, number) {
+    return {
+      type: PK10_ACTION_UPDATE_BET_GAME_TYPE_COMPOUND_BET3,
+      payload: {
+        rank: rank,
+        number: number,
+        value: false
+      }
+    };
+  },
+  pk10AddBetDragonTiger: function pk10AddBetDragonTiger(rank, category) {
     return {
       type: PK10_ACTION_UPDATE_BET_GAME_TYPE_DRAGON_TIGER,
       payload: {
-        selection: selection
+        rank: rank,
+        category: category,
+        value: true
+      }
+    };
+  },
+  pk10RemoveBetDragonTiger: function pk10RemoveBetDragonTiger(rank, category) {
+    return {
+      type: PK10_ACTION_UPDATE_BET_GAME_TYPE_DRAGON_TIGER,
+      payload: {
+        rank: rank,
+        category: category,
+        value: false
       }
     };
   },
@@ -56211,6 +56397,18 @@ var selectors = {
   pk10BetsFiveElement: function pk10BetsFiveElement() {
     var store = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return lodash__WEBPACK_IMPORTED_MODULE_0___default.a.get(store, "".concat(NAME_SPACE, ".bets.fiveElements"));
+  },
+  pk10BetsDragonTiger: function pk10BetsDragonTiger() {
+    var store = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return lodash__WEBPACK_IMPORTED_MODULE_0___default.a.get(store, "".concat(NAME_SPACE, ".bets.dragonTiger"));
+  },
+  pk10BetsCompoundBet2: function pk10BetsCompoundBet2() {
+    var store = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return lodash__WEBPACK_IMPORTED_MODULE_0___default.a.get(store, "".concat(NAME_SPACE, ".bets.compoundBet2"));
+  },
+  pk10BetsCompoundBet3: function pk10BetsCompoundBet3() {
+    var store = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return lodash__WEBPACK_IMPORTED_MODULE_0___default.a.get(store, "".concat(NAME_SPACE, ".bets.compoundBet3"));
   },
   pk10CurrentTable: function pk10CurrentTable() {
     var store = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
